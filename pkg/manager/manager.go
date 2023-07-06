@@ -24,42 +24,37 @@ import (
 )
 
 type Manager struct {
-	rw         sync.RWMutex
+	mutex      sync.Mutex
 	schedulers map[string]scaler.Scaler
 	config     *config.Config
 }
 
 func New(config *config.Config) *Manager {
 	return &Manager{
-		rw:         sync.RWMutex{},
+		mutex:      sync.Mutex{},
 		schedulers: make(map[string]scaler.Scaler),
 		config:     config,
 	}
 }
 
 func (m *Manager) GetOrCreate(metaData *model.Meta) scaler.Scaler {
-	m.rw.RLock()
-	if scheduler := m.schedulers[metaData.Key]; scheduler != nil {
-		m.rw.RUnlock()
-		return scheduler
-	}
-	m.rw.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
-	m.rw.Lock()
 	if scheduler := m.schedulers[metaData.Key]; scheduler != nil {
-		m.rw.Unlock()
 		return scheduler
 	}
+
 	log.Printf("Create new scaler for app %s", metaData.Key)
 	scheduler := scaler.New(metaData, m.config)
 	m.schedulers[metaData.Key] = scheduler
-	m.rw.Unlock()
 	return scheduler
 }
 
 func (m *Manager) Get(metaKey string) (scaler.Scaler, error) {
-	m.rw.RLock()
-	defer m.rw.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if scheduler := m.schedulers[metaKey]; scheduler != nil {
 		return scheduler, nil
 	}
