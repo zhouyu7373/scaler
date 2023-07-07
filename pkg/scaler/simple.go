@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -154,7 +155,11 @@ func (s *Simple) Idle(ctx context.Context, request *pb.IdleRequest) (*pb.IdleRep
 	needDestroy := false
 	slotId := ""
 	if request.Result != nil && request.Result.NeedDestroy != nil && *request.Result.NeedDestroy {
-		needDestroy = true
+		// 生成0到1之间的随机浮点数
+		randNum := rand.Float64()
+		if randNum < 0.5 { // 50%的概率
+			needDestroy = true
+		}
 	}
 	defer func() {
 		if needDestroy {
